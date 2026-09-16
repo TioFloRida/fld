@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
         self.search_edit.setPlaceholderText("Type text → Enter / Next / Prev")
         self.search_edit.returnPressed.connect(self.find_next)
         self.search_edit.textChanged.connect(self._on_search_text_changed)
-        self.search_edit.setMaximumWidth(320)
+        self.search_edit.setMaximumWidth(420)
         search_row.addWidget(self.search_edit)
 
         self.btn_prev = QPushButton("◀ Prev")
