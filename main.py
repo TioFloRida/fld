@@ -36,17 +36,26 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
         scheduled_actions.append((node_index, action))
         next_allowed_index = node_index + 1
 
-    available_symbols = set()
     for node_index, action in scheduled_actions:
-        missing = [name for name in action.get("dependencies", []) if name not in available_symbols]
-        if missing:
-            raise ValueError(
-                f"Action {action['action']!r} cannot be placed because dependencies are missing: {missing}"
-            )
-
         node = nodes[node_index]
-        node.setdefault("actions", []).append(action["action"])
-        available_symbols.update(extract_defined_names(action["action"]))
+        node.setdefault("_scheduled_actions", []).append(action)
+
+    available_symbols = set()
+    for node in iter_preorder_nodes(placed_tree):
+        scheduled_for_node = node.pop("_scheduled_actions", [])
+        if not scheduled_for_node:
+            continue
+
+        node["actions"] = []
+        for action in scheduled_for_node:
+            missing = [name for name in action.get("dependencies", []) if name not in available_symbols]
+            if missing:
+                raise ValueError(
+                    f"Action {action['action']!r} cannot be placed because dependencies are missing: {missing}"
+                )
+
+            node["actions"].append(action["action"])
+            available_symbols.update(extract_defined_names(action["action"]))
 
     return placed_tree
 
