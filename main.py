@@ -5,7 +5,7 @@ import re
 from typing import Dict, Iterable, List
 
 
-DECLARATION_PATTERN = re.compile(r"\bvar\s+([A-Za-z_]\w*)\s*=")
+ASSIGNMENT_PATTERN = re.compile(r"(?:^|;)\s*(?:var\s+)?([A-Za-z_]\w*)\s*=")
 
 
 def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
@@ -15,10 +15,19 @@ def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
 
 
 def extract_defined_names(action_code: str) -> List[str]:
-    return DECLARATION_PATTERN.findall(action_code)
+    return ASSIGNMENT_PATTERN.findall(action_code)
 
 
 def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = None) -> Dict:
+    """Randomly place actions onto preorder tree nodes without breaking dependencies.
+
+    The input tree is expected to use the shape {"name": str, "children": [node, ...]}.
+    Each action must be a mapping with "action" and "dependencies" keys. Random placement
+    is performed across preorder node positions, but the selected positions always increase
+    so the supplied action list still executes in order. A ValueError is raised when the
+    tree has too few nodes or when an action depends on names that are not yet available
+    during preorder execution.
+    """
     placed_tree = copy.deepcopy(tree)
     nodes = list(iter_preorder_nodes(placed_tree))
 
@@ -42,11 +51,15 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
 
     available_symbols = set()
     for node in iter_preorder_nodes(placed_tree):
+        existing_actions = list(node.get("actions", []))
+        for existing_action in existing_actions:
+            available_symbols.update(extract_defined_names(existing_action))
+
         scheduled_for_node = node.pop("_scheduled_actions", [])
         if not scheduled_for_node:
             continue
 
-        node["actions"] = []
+        node.setdefault("actions", [])
         for action in scheduled_for_node:
             missing = [name for name in action.get("dependencies", []) if name not in available_symbols]
             if missing:
