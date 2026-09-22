@@ -5,7 +5,7 @@ import re
 from typing import Dict, Iterable, List
 
 
-ASSIGNMENT_PATTERN = re.compile(r"(?:^|;)\s*(?:var\s+)?([A-Za-z_]\w*)\s*=")
+ASSIGNMENT_PATTERN = re.compile(r"(?:^|[;\r\n])\s*(?:var\s+)?([A-Za-z_]\w*)\s*=")
 
 
 def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
@@ -23,10 +23,11 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
 
     The input tree is expected to use the shape {"name": str, "children": [node, ...]}.
     Each action must be a mapping with "action" and "dependencies" keys. Random placement
-    is performed across preorder node positions, but the selected positions always increase
-    so the supplied action list still executes in order. A ValueError is raised when the
-    tree has too few nodes or when an action depends on names that are not yet available
-    during preorder execution.
+    is performed across preorder node positions, and each chosen node index is strictly
+    greater than the previous one, so at most one new action is added per node and the
+    supplied action list still executes in order. A ValueError is raised when the tree
+    has too few nodes or when an action depends on names that are not yet available during
+    preorder execution.
     """
     placed_tree = copy.deepcopy(tree)
     nodes = list(iter_preorder_nodes(placed_tree))
