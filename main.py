@@ -5,7 +5,7 @@ import re
 from typing import Dict, Iterable, List
 
 
-DECLARATION_PATTERN = re.compile(r"^\s*var\s+([A-Za-z_]\w*)\s*=")
+DECLARATION_PATTERN = re.compile(r"\bvar\s+([A-Za-z_]\w*)\s*=")
 
 
 def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
@@ -15,8 +15,7 @@ def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
 
 
 def extract_defined_names(action_code: str) -> List[str]:
-    match = DECLARATION_PATTERN.match(action_code)
-    return [match.group(1)] if match else []
+    return DECLARATION_PATTERN.findall(action_code)
 
 
 def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = None) -> Dict:
@@ -27,8 +26,15 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
         raise ValueError("The tree does not have enough nodes for all actions.")
 
     rng = random.Random(seed)
-    chosen_indexes = sorted(rng.sample(range(len(nodes)), len(actions)))
-    scheduled_actions = sorted(zip(chosen_indexes, actions), key=lambda item: item[0])
+    scheduled_actions = []
+    next_allowed_index = 0
+
+    for action_index, action in enumerate(actions):
+        remaining_actions = len(actions) - action_index - 1
+        max_index = len(nodes) - remaining_actions - 1
+        node_index = rng.randint(next_allowed_index, max_index)
+        scheduled_actions.append((node_index, action))
+        next_allowed_index = node_index + 1
 
     available_symbols = set()
     for node_index, action in scheduled_actions:
