@@ -22,18 +22,20 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
     """Randomly place actions onto preorder tree nodes without breaking dependencies.
 
     The input tree is expected to use the shape {"name": str, "children": [node, ...]}.
-    Each action must be a mapping with "action" and "dependencies" keys. Random placement
-    is performed across preorder node positions, and each chosen node index is strictly
-    greater than the previous one, so at most one new action is added per node and the
-    supplied action list still executes in order. A ValueError is raised when the tree
-    has too few nodes or when an action depends on names that are not yet available during
-    preorder execution.
+    Each action must be a mapping with "action" and "dependencies" keys. New actions are
+    only placed onto nodes that do not already have an "actions" list, and each chosen
+    preorder node index is strictly greater than the previous one so the supplied action
+    list still executes in order. Existing node actions stay in place and run before any
+    later nodes in preorder traversal. A ValueError is raised when there are not enough
+    empty nodes for the requested actions or when an action depends on names that are not
+    yet available during preorder execution.
     """
     placed_tree = copy.deepcopy(tree)
     nodes = list(iter_preorder_nodes(placed_tree))
+    available_node_indexes = [index for index, node in enumerate(nodes) if not node.get("actions")]
 
-    if len(nodes) < len(actions):
-        raise ValueError("The tree does not have enough nodes for all actions.")
+    if len(available_node_indexes) < len(actions):
+        raise ValueError("The tree does not have enough empty nodes for all actions.")
 
     rng = random.Random(seed)
     scheduled_actions = []
@@ -41,10 +43,11 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
 
     for action_index, action in enumerate(actions):
         remaining_actions = len(actions) - action_index - 1
-        max_index = len(nodes) - remaining_actions - 1
-        node_index = rng.randint(next_allowed_index, max_index)
+        max_index = len(available_node_indexes) - remaining_actions - 1
+        chosen_position = rng.randint(next_allowed_index, max_index)
+        node_index = available_node_indexes[chosen_position]
         scheduled_actions.append((node_index, action))
-        next_allowed_index = node_index + 1
+        next_allowed_index = chosen_position + 1
 
     for node_index, action in scheduled_actions:
         node = nodes[node_index]

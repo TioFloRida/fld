@@ -72,6 +72,24 @@ class PlaceActionsRandomlyTests(unittest.TestCase):
         placed = place_actions_randomly(self.tree, actions, seed=1)
         self.assertEqual(self.collect_actions(placed), ["A = 1\nB = 2", "C = A + B"])
 
+    def test_preserves_existing_actions_and_uses_later_empty_nodes(self):
+        tree = {
+            "name": "root",
+            "actions": ["var PRE = 1;"],
+            "children": [
+                {"name": "child", "children": []},
+                {"name": "sibling", "children": []},
+            ],
+        }
+        actions = [
+            {"action": "TOTAL = PRE + 1;", "dependencies": ["PRE"]},
+        ]
+
+        placed = place_actions_randomly(tree, actions, seed=0)
+
+        self.assertEqual(placed["actions"], ["var PRE = 1;"])
+        self.assertEqual(self.collect_actions(placed), ["var PRE = 1;", "TOTAL = PRE + 1;"])
+
     def test_raises_for_missing_dependencies(self):
         actions = [
             {"action": "C = A + B;", "dependencies": ["A", "B"]},
@@ -89,6 +107,17 @@ class PlaceActionsRandomlyTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             place_actions_randomly(small_tree, actions, seed=0)
+
+    def test_raises_when_not_enough_empty_nodes(self):
+        tree = {
+            "name": "root",
+            "actions": ["var A = 1;"],
+            "children": [],
+        }
+        actions = [{"action": "var B = 2;", "dependencies": []}]
+
+        with self.assertRaises(ValueError):
+            place_actions_randomly(tree, actions, seed=0)
 
 
 if __name__ == "__main__":
