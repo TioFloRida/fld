@@ -5,7 +5,7 @@ import re
 from typing import Dict, Iterable, List
 
 
-ASSIGNMENT_PATTERN = re.compile(r"^\s*(?:var\s+)?([A-Za-z_]\w*)\s*=")
+DECLARATION_PATTERN = re.compile(r"^\s*var\s+([A-Za-z_]\w*)\s*=")
 
 
 def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
@@ -15,7 +15,7 @@ def iter_preorder_nodes(tree: Dict) -> Iterable[Dict]:
 
 
 def extract_defined_names(action_code: str) -> List[str]:
-    match = ASSIGNMENT_PATTERN.match(action_code)
+    match = DECLARATION_PATTERN.match(action_code)
     return [match.group(1)] if match else []
 
 
@@ -28,9 +28,10 @@ def place_actions_randomly(tree: Dict, actions: List[Dict], seed: int | None = N
 
     rng = random.Random(seed)
     chosen_indexes = sorted(rng.sample(range(len(nodes)), len(actions)))
+    scheduled_actions = sorted(zip(chosen_indexes, actions), key=lambda item: item[0])
 
     available_symbols = set()
-    for action, node_index in zip(actions, chosen_indexes):
+    for node_index, action in scheduled_actions:
         missing = [name for name in action.get("dependencies", []) if name not in available_symbols]
         if missing:
             raise ValueError(
